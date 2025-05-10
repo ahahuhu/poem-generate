@@ -1,0 +1,9 @@
+einops==0.8.1
+filelock==3.0.12
+importlib_metadata==8.0.0
+importlib_metadata==8.5.0
+numpy==1.24.4
+Requests==2.32.3
+torch==2.4.1
+tqdm==4.58.0
+transformers==4.46.3
