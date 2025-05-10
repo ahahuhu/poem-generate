@@ -53,15 +53,23 @@ def evaluate(model, val_loader, device):
             num_batches += 1
     return total_loss/num_batches
 
+def get_tokenizer(args):
+    if not os.path.exists(args.tokenizer_dir):
+        os.makedirs(args.tokenizer_dir, exist_ok=True)
+        BertTokenizer.from_pretrained(args.model_name).save_pretrained(args.tokenizer_dir)
+    tokenizer = BertTokenizer.from_pretrained(args.tokenizer_dir, local_files_only=True)
+    return tokenizer
+
 def train(args):
     device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
     # Create the data and its corresponding datasets and dataloader.
-    poem_dataset = PoemDataset(args.poem_path, args.model_name, args.tokenizer)
+    tokenizer = get_tokenizer(args)
+    poem_dataset = PoemDataset(args.poem_path, tokenizer)
     poem_dataloader = DataLoader(poem_dataset, shuffle=True, batch_size=args.batch_size, collate_fn=poem_dataset.collate_fn)
     with open(os.path.join("result", f'{args.epochs}.txt'), mode='w') as f:
         f.write(f"训练时间：{time.time()}\n训练轮数： {args.epochs}\n学习率：{args.lr}\n\n")
     args = add_arguments(args)
-    model = PoemGPT(args)
+    model = PoemGPT(args, tokenizer)
     model = model.to(device)
   
     optimizer = AdamW(model.parameters(), lr=args.lr)
@@ -72,7 +80,6 @@ def train(args):
         train_loss = 0
         num_batches = 0
         batch_losses = []
-        batch_lr = []
 
         for batch_idx, batch in enumerate(tqdm(poem_dataloader, desc=f'train-{epoch}', disable=False)):
             # Get the input and move it to the gpu (I do not recommend training this model on CPU).
@@ -99,22 +106,13 @@ def train(args):
             train_loss += loss.item()
             num_batches += 1
             batch_losses.append(loss.item())
-            # 获取当前学习率
-            current_lr = optimizer.param_groups[0]['lr']
-            batch_lr.append(current_lr)
-
-            # 记录每个 batch 的详细信息
-            with open(os.path.join("result", f'{args.epochs}.txt'), mode='a') as f:
-                f.write(f"Epoch {epoch} | Batch {batch_idx} | Loss: {loss.item():.4f} | LR: {current_lr:.6f}\n")
     
         train_loss = train_loss / num_batches
         avg_batch_loss = np.mean(batch_losses)
-        print(f"Epoch {epoch}: train loss :: {train_loss :.3f}.")
+        print(f"Epoch {epoch}: train loss :: {train_loss :.3f}")
         with open(os.path.join("result", f'{args.epochs}.txt'), mode='a') as f:
-            f.write(f"Epoch {epoch}: train loss :: {train_loss :.3f}.\n")
+            f.write(f"Epoch {epoch}: train loss :: {train_loss :.3f}\n")
             f.write(f"Epoch {epoch}: avg batch loss :: {avg_batch_loss:.4f}\n")
-            f.write(f"Epoch {epoch}: batch losses: {batch_losses}\n")
-            f.write(f"Epoch {epoch}: batch learning rates: {batch_lr}\n")
   
     save_model(model, optimizer, args, f'{args.epochs}_{args.filepath}')
       
@@ -133,6 +131,8 @@ def get_args():
   parser.add_argument("--batch_size", help='The training batch size.', type=int, default=8)
   parser.add_argument("--lr", type=float, help="learning rate", default=1e-4)
   parser.add_argument("--model_name", type=str, help="The model size as specified on hugging face.", default='uer/gpt2-chinese-cluecorpussmall')
+  parser.add_argument("--model_dir", type=str, default='cache/pretrained_model')
+  parser.add_argument("--tokenizer_dir", type=str, default='cache/bert-tokenizer')
 
   args = parser.parse_args()
   return args

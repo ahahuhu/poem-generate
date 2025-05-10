@@ -5,11 +5,10 @@ from transformers import BertTokenizer
 
 class PoemGPT(nn.Module):
 
-  def __init__(self, args):
+  def __init__(self, args, tokenizer):
     super().__init__()
     self.gpt = GPT2Model.from_pretrained(model=args.model_name, d=args.d, l=args.l, num_heads=args.num_heads)
-    self.tokenizer = BertTokenizer.from_pretrained(args.model_name)
-    self.tokenizer.pad_token = self.tokenizer.eos_token
+    self.tokenizer = tokenizer
 
     # 将最终的输出last_hidden_state转化为词汇表的概率分布
     self.vob_proj = nn.Linear(args.d, self.tokenizer.vocab_size)

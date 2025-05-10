@@ -5,15 +5,14 @@ import numpy as np
 
 
 class PoemDataset(torch.utils.data.Dataset):
-    def __init__(self, data_path, model_name, local_dir) -> None:
+    def __init__(self, data_path, tokenizer) -> None:
         super().__init__()
-        self.tokenizer = BertTokenizer.from_pretrained(model_name, cache_dir=local_dir)
+        self.tokenizer = tokenizer
         data = np.load(data_path)
         data = [str(poem) for poem in data]
         self.data = data # 为一个数组，数组里面的元素是一首诗的各个字符串
 
     def __len__(self) -> int:
-        return 400
         return len(self.data)
     
     def __getitem__(self, index):
