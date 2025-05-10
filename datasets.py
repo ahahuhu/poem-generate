@@ -5,9 +5,9 @@ import numpy as np
 
 
 class PoemDataset(torch.utils.data.Dataset):
-    def __init__(self, data_path, model_name) -> None:
+    def __init__(self, data_path, model_name, local_dir) -> None:
         super().__init__()
-        self.tokenizer = BertTokenizer.from_pretrained(model_name)
+        self.tokenizer = BertTokenizer.from_pretrained(model_name, cache_dir=local_dir)
         data = np.load(data_path)
         data = [str(poem) for poem in data]
         self.data = data # 为一个数组，数组里面的元素是一首诗的各个字符串

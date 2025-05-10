@@ -1,5 +1,7 @@
 import argparse
 import random
+import time
+from tkinter import W
 import torch
 
 import numpy as np
@@ -12,6 +14,7 @@ import torch.utils.data
 from tqdm import tqdm
 from transformers import BertTokenizer
 from einops import rearrange
+import os
 
 from datasets import (
   PoemDataset,
@@ -53,9 +56,10 @@ def evaluate(model, val_loader, device):
 def train(args):
     device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
     # Create the data and its corresponding datasets and dataloader.
-    poem_dataset = PoemDataset(args.poem_path, args.model_name)
+    poem_dataset = PoemDataset(args.poem_path, args.model_name, args.tokenizer)
     poem_dataloader = DataLoader(poem_dataset, shuffle=True, batch_size=args.batch_size, collate_fn=poem_dataset.collate_fn)
-
+    with open(os.path.join("result", f'{args.epochs}.txt'), mode='w') as f:
+        f.write(f"训练时间：{time.time()}\n训练轮数： {args.epochs}\n学习率：{args.lr}\n\n")
     args = add_arguments(args)
     model = PoemGPT(args)
     model = model.to(device)
@@ -67,8 +71,10 @@ def train(args):
         model.train()
         train_loss = 0
         num_batches = 0
-  
-        for batch in tqdm(poem_dataloader, desc=f'train-{epoch}', disable=False):
+        batch_losses = []
+        batch_lr = []
+
+        for batch_idx, batch in enumerate(tqdm(poem_dataloader, desc=f'train-{epoch}', disable=False)):
             # Get the input and move it to the gpu (I do not recommend training this model on CPU).
             b_ids, b_mask = batch['token_ids'], batch['attention_mask']
             b_ids = b_ids.to(device)
@@ -92,9 +98,23 @@ def train(args):
 
             train_loss += loss.item()
             num_batches += 1
+            batch_losses.append(loss.item())
+            # 获取当前学习率
+            current_lr = optimizer.param_groups[0]['lr']
+            batch_lr.append(current_lr)
+
+            # 记录每个 batch 的详细信息
+            with open(os.path.join("result", f'{args.epochs}.txt'), mode='a') as f:
+                f.write(f"Epoch {epoch} | Batch {batch_idx} | Loss: {loss.item():.4f} | LR: {current_lr:.6f}\n")
     
         train_loss = train_loss / num_batches
+        avg_batch_loss = np.mean(batch_losses)
         print(f"Epoch {epoch}: train loss :: {train_loss :.3f}.")
+        with open(os.path.join("result", f'{args.epochs}.txt'), mode='a') as f:
+            f.write(f"Epoch {epoch}: train loss :: {train_loss :.3f}.\n")
+            f.write(f"Epoch {epoch}: avg batch loss :: {avg_batch_loss:.4f}\n")
+            f.write(f"Epoch {epoch}: batch losses: {batch_losses}\n")
+            f.write(f"Epoch {epoch}: batch learning rates: {batch_lr}\n")
   
     save_model(model, optimizer, args, f'{args.epochs}_{args.filepath}')
       
