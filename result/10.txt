@@ -1,24 +1,4 @@
-训练时间：1746859483.8606088
+训练时间：1746860487.5900726
 训练轮数： 10
 学习率：0.0001
 
-Epoch 0: train loss :: 4.656
-Epoch 0: avg batch loss :: 4.6558
-Epoch 1: train loss :: 3.388
-Epoch 1: avg batch loss :: 3.3884
-Epoch 2: train loss :: 3.171
-Epoch 2: avg batch loss :: 3.1714
-Epoch 3: train loss :: 3.002
-Epoch 3: avg batch loss :: 3.0025
-Epoch 4: train loss :: 2.569
-Epoch 4: avg batch loss :: 2.5687
-Epoch 5: train loss :: 2.224
-Epoch 5: avg batch loss :: 2.2240
-Epoch 6: train loss :: 1.980
-Epoch 6: avg batch loss :: 1.9801
-Epoch 7: train loss :: 1.630
-Epoch 7: avg batch loss :: 1.6305
-Epoch 8: train loss :: 1.339
-Epoch 8: avg batch loss :: 1.3386
-Epoch 9: train loss :: 1.070
-Epoch 9: avg batch loss :: 1.0697
