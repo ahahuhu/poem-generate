@@ -7,7 +7,7 @@ class PoemGPT(nn.Module):
 
   def __init__(self, args, tokenizer):
     super().__init__()
-    self.gpt = GPT2Model.from_pretrained(model=args.model_dir, d=args.d, l=args.l, num_heads=args.num_heads)
+    self.gpt = GPT2Model.from_pretrained(model_name=args.model_name, model_dir=args.model_dir, d=args.d, l=args.l, num_heads=args.num_heads)
     self.tokenizer = tokenizer
 
     # 将最终的输出last_hidden_state转化为词汇表的概率分布

@@ -13,6 +13,7 @@ class PoemDataset(torch.utils.data.Dataset):
         self.data = data # 为一个数组，数组里面的元素是一首诗的各个字符串
 
     def __len__(self) -> int:
+        return 400
         return len(self.data)
     
     def __getitem__(self, index):

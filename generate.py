@@ -27,5 +27,3 @@ if __name__ == "__main__":
     args = get_args()
     args.filepath = f'{args.epochs}-{args.lr}-sonnet.pt'
     generate_poem(args)
-
-

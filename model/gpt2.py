@@ -1,10 +1,11 @@
 import torch
 from torch import nn
-from transformers import GPT2LMHeadModel
+from transformers import GPT2LMHeadModel, AutoModel
 
 from config import GPT2Config
 from model.base_gpt import GPTPreTrainedModel
 from modules.gpt2_layer import GPT2Layer
+import os
 
 def get_extended_attention_mask(attention_mask: torch.Tensor, dtype) -> torch.Tensor:
     # attention_mask [batch_size, seq_length]
@@ -106,8 +107,11 @@ class GPT2Model(GPTPreTrainedModel):
 
 
     @classmethod
-    def from_pretrained(cls, model='uer/gpt2-chinese-cluecorpussmall', d=768, l=12, num_heads=12):
-        gpt_model = GPT2LMHeadModel.from_pretrained(model).eval()
+    def from_pretrained(cls, model_name='uer/gpt2-chinese-cluecorpussmall', model_dir:str = 'cache/pretrained_model', d=768, l=12, num_heads=12):
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir, exist_ok=True)
+            AutoModel.from_pretrained(model_name).save_pretrained(model_dir)
+        gpt_model = GPT2LMHeadModel.from_pretrained(model_dir).eval()
         our_model = GPT2Model(GPT2Config(hidden_size=d, num_hidden_layers=l,num_attention_heads=num_heads,
                                          intermediate_size=d*3)).eval()
         # for name, param in gpt_model.named_parameters():
