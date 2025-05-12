@@ -66,7 +66,7 @@ def train(args):
     tokenizer = get_tokenizer(args)
     poem_dataset = PoemDataset(args.poem_path, tokenizer)
     poem_dataloader = DataLoader(poem_dataset, shuffle=True, batch_size=args.batch_size, collate_fn=poem_dataset.collate_fn)
-    with open(os.path.join("result", f'{args.epochs}.txt'), mode='w') as f:
+    with open(os.path.join("result", f'{args.epochs}-{args.lr}.txt'), mode='w') as f:
         f.write(f"训练时间：{time.time()}\n训练轮数： {args.epochs}\n学习率：{args.lr}\n\n")
     args = add_arguments(args)
     model = PoemGPT(args, tokenizer)
@@ -110,7 +110,7 @@ def train(args):
         train_loss = train_loss / num_batches
         avg_batch_loss = np.mean(batch_losses)
         print(f"Epoch {epoch}: train loss :: {train_loss :.3f}")
-        with open(os.path.join("result", f'{args.epochs}.txt'), mode='a') as f:
+        with open(os.path.join("result", f'{args.epochs}-{args.lr}.txt'), mode='a') as f:
             f.write(f"Epoch {epoch}: train loss : {train_loss :.3f}\n")
             f.write(f"Epoch {epoch}: avg batch loss : {avg_batch_loss:.4f}\n")
   

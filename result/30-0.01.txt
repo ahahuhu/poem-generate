@@ -1,0 +1,8 @@
+训练时间：1747035454.683125
+训练轮数： 30
+学习率：0.01
+
+Epoch 0: train loss : 10.078
+Epoch 0: avg batch loss : 10.0780
+Epoch 1: train loss : 3.635
+Epoch 1: avg batch loss : 3.6346
