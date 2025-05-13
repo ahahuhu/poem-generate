@@ -28,7 +28,8 @@ class PoemGPT(nn.Module):
       return param.device
 
   @torch.no_grad()
-  def generate(self, encoding, temperature=0.7, top_p=0.9, max_length=128):
+  def generate_top_q(self, encoding, temperature=0.7, top_p=0.9, max_length=128):
+    """top-p(nucleus)"""
     token_ids = encoding.to(self.get_device())
     # 1表示正常的输入 0表示pad的值
     attention_mask = torch.ones(token_ids.shape, dtype=torch.int64).to(self.get_device())
@@ -62,6 +63,43 @@ class PoemGPT(nn.Module):
       attention_mask = torch.cat(
         [attention_mask, torch.ones((1, 1), dtype=torch.int64).to(self.get_device())], dim=1
       )
+
+    # 去除前3个token，一般前3个token为特殊的token，比如说[CLS]、[BOS]
+    generated_output = self.tokenizer.decode(token_ids[0].cpu().numpy().tolist())
+    return token_ids, generated_output
+  
+  @torch.no_grad()
+  def generate_top_k(self, encoding, temperature=0.7, k_size=3, max_length=128):
+    """top-k"""
+    token_ids = encoding.to(self.get_device()) #(bs, sl)
+    # 1表示正常的输入 0表示pad的值
+    attention_mask = torch.ones(token_ids.shape, dtype=torch.int64).to(self.get_device())
+    for _ in range(max_length):
+      # Forward pass to get logits
+      logits_sequence = self.forward(token_ids, attention_mask) #(bs,sl,vocab_size)
+      logits_last_token = logits_sequence[:, -1, :] / temperature  # Apply temperature scaling (bs, vocab_size)
+
+      # Convert logits to probabilities
+      probs = torch.nn.functional.softmax(logits_last_token, dim=-1)
+
+      # Top-k sampling
+      sorted_probs, sorted_indices = torch.sort(probs, descending=True)
+      filtered_probs = sorted_probs[:k_size] # 取出前k个最大的Token
+      filtered_probs /= filtered_probs.sum(dim=-1, keepdim=True)  # Normalize probabilities
+
+      # Sample from filtered distribution
+      sampled_index = torch.multinomial(filtered_probs, 1)
+      sampled_token = sorted_indices.gather(dim=-1, index=sampled_index)
+
+
+      # Append sampled token
+      token_ids = torch.cat([token_ids, sampled_token], dim=1)
+      attention_mask = torch.cat(
+        [attention_mask, torch.ones((1, 1), dtype=torch.int64).to(self.get_device())], dim=1
+      )
+      # Stop if end-of-sequence token is reached
+      if sampled_token.item() == self.tokenizer.sep_token_id:
+        break
 
     # 去除前3个token，一般前3个token为特殊的token，比如说[CLS]、[BOS]
     generated_output = self.tokenizer.decode(token_ids[0].cpu().numpy().tolist())

@@ -1,0 +1,44 @@
+训练时间：1747046203.06613
+训练轮数： 20
+学习率：0.0001
+
+Epoch 0: train loss : 2.370
+Epoch 0: avg batch loss : 2.3695
+Epoch 1: train loss : 1.939
+Epoch 1: avg batch loss : 1.9388
+Epoch 2: train loss : 1.804
+Epoch 2: avg batch loss : 1.8036
+Epoch 3: train loss : 1.721
+Epoch 3: avg batch loss : 1.7205
+Epoch 4: train loss : 1.652
+Epoch 4: avg batch loss : 1.6519
+Epoch 5: train loss : 1.600
+Epoch 5: avg batch loss : 1.5996
+Epoch 6: train loss : 1.548
+Epoch 6: avg batch loss : 1.5483
+Epoch 7: train loss : 1.502
+Epoch 7: avg batch loss : 1.5020
+Epoch 8: train loss : 1.462
+Epoch 8: avg batch loss : 1.4617
+Epoch 9: train loss : 1.419
+Epoch 9: avg batch loss : 1.4188
+Epoch 10: train loss : 1.379
+Epoch 10: avg batch loss : 1.3793
+Epoch 11: train loss : 1.343
+Epoch 11: avg batch loss : 1.3430
+Epoch 12: train loss : 1.305
+Epoch 12: avg batch loss : 1.3052
+Epoch 13: train loss : 1.264
+Epoch 13: avg batch loss : 1.2636
+Epoch 14: train loss : 1.227
+Epoch 14: avg batch loss : 1.2268
+Epoch 15: train loss : 1.192
+Epoch 15: avg batch loss : 1.1917
+Epoch 16: train loss : 1.154
+Epoch 16: avg batch loss : 1.1545
+Epoch 17: train loss : 1.122
+Epoch 17: avg batch loss : 1.1219
+Epoch 18: train loss : 1.081
+Epoch 18: avg batch loss : 1.0812
+Epoch 19: train loss : 1.057
+Epoch 19: avg batch loss : 1.0574

@@ -5,7 +5,7 @@ import subprocess
 import os
 
 # --- 配置参数 ---
-PYTHON_EXECUTABLE = "python"  # 或者 "python3"，根据你的环境
+PYTHON_EXECUTABLE = "python"
 TRAIN_SCRIPT = "train.py"
 COMMON_ARGS = ["--use_gpu", "--epochs=30"] # 其他固定参数
 LEARNING_RATES = [1e-2, 1e-3, 1e-4]
@@ -41,7 +41,6 @@ def run_training_with_lr(lr_value):
             print(f"标准错误:\n{e.stderr}")
     except FileNotFoundError:
         print(f"错误: Python 可执行文件 '{PYTHON_EXECUTABLE}' 或训练脚本 '{TRAIN_SCRIPT}' 未找到。")
-        print("请确保它们在你的 PATH 环境变量中，或者提供正确的路径。")
         exit(1)
     except Exception as e:
         print(f"❌ 执行命令时发生未知错误: {e}")
