@@ -14,7 +14,7 @@ class PoemDataset(torch.utils.data.Dataset):
 
     def __len__(self) -> int:
         return len(self.data)
-    
+
     def __getitem__(self, index):
         poem: str = self.data[index]
         return (index, poem)

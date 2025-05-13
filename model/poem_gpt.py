@@ -1,3 +1,4 @@
+import heapq
 import torch
 from torch import nn
 from model.gpt2 import GPT2Model
@@ -54,15 +55,15 @@ class PoemGPT(nn.Module):
       sampled_index = torch.multinomial(filtered_probs, 1)
       sampled_token = sorted_indices.gather(dim=-1, index=sampled_index)
 
-      # Stop if end-of-sequence token is reached
-      if sampled_token.item() == self.tokenizer.eos_token_id:
-        break
 
       # Append sampled token
       token_ids = torch.cat([token_ids, sampled_token], dim=1)
       attention_mask = torch.cat(
         [attention_mask, torch.ones((1, 1), dtype=torch.int64).to(self.get_device())], dim=1
       )
+      # Stop if end-of-sequence token is reached
+      if sampled_token.item() == self.tokenizer.sep_token_id:
+        break
 
     # 去除前3个token，一般前3个token为特殊的token，比如说[CLS]、[BOS]
     generated_output = self.tokenizer.decode(token_ids[0].cpu().numpy().tolist())
@@ -103,4 +104,62 @@ class PoemGPT(nn.Module):
 
     # 去除前3个token，一般前3个token为特殊的token，比如说[CLS]、[BOS]
     generated_output = self.tokenizer.decode(token_ids[0].cpu().numpy().tolist())
+    return token_ids, generated_output
+
+  @torch.no_grad()
+  def generate_greedy_search(self, encoding, max_length=128):
+    """greedy_search"""
+    token_ids = encoding.to(self.get_device()) #(bs, sl)
+    # 1表示正常的输入 0表示pad的值
+    attention_mask = torch.ones(token_ids.shape, dtype=torch.int64).to(self.get_device())
+    for _ in range(max_length):
+      # Forward pass to get logits
+      logits_sequence = self.forward(token_ids, attention_mask) #(bs,sl,vocab_size)
+      last_logits = logits_sequence[:, -1, :]
+      # greedy search 直接取出最大的一个值
+      sampled_token = torch.argmax(last_logits, dim=1).unsqueeze(dim=0)
+
+      # Append sampled token
+      token_ids = torch.cat([token_ids, sampled_token], dim=1)
+      attention_mask = torch.cat(
+        [attention_mask, torch.ones((1, 1), dtype=torch.int64).to(self.get_device())], dim=1
+      )
+      # Stop if end-of-sequence token is reached
+      if sampled_token.item() == self.tokenizer.sep_token_id:
+        break
+
+    # 去除前3个token，一般前3个token为特殊的token，比如说[CLS]、[BOS]
+    generated_output = self.tokenizer.decode(token_ids[0].cpu().numpy().tolist())
+    return token_ids, generated_output
+
+  @torch.no_grad()
+  def generate_beam_search(self, encoding, beam_size:int = 3, max_length=128):
+    """beam_search"""
+    token_ids = encoding.to(self.get_device()) #(bs, sl)
+    # 1表示正常的输入 0表示pad的值
+    attention_mask = torch.ones(token_ids.shape, dtype=torch.int64).to(self.get_device())
+    # beam search需要一个beams来保存最佳的路线
+    beams = [(token_ids, 1)]
+    for _ in range(max_length):
+      t_res = [] # 存放备份的token序列
+      for token_id, score in beams:
+        if token_id[0, -1].item() == self.tokenizer.sep_token_id:
+          t_res.append((token_id, score))
+          continue
+        logits_sequence = self.forward(token_id, attention_mask) #(bs,sl,vocab_size)
+        last_logits = logits_sequence[:, -1, :]
+        # 根据last_prob进行排序，取出前beam size大小的数量
+        last_logits, indices  = torch.topk(last_logits, beam_size, -1)  # (bs, beam_size)
+        last_scores = torch.nn.functional.softmax(last_logits, -1)
+        for j in range(beam_size):
+          # 更新每条路径的分数和token
+          t_res.append((torch.cat([token_id, indices[0, j].unsqueeze(0).unsqueeze(0)], dim=1), torch.log(last_scores[0][j]).item() +score))
+      # Append sampled token
+      beams = sorted(t_res, key=lambda x: -x[1])[:beam_size]
+      attention_mask = torch.cat(
+        [attention_mask, torch.ones((1, 1), dtype=torch.int64).to(self.get_device())], dim=1
+      )
+
+    # 去除前3个token，一般前3个token为特殊的token，比如说[CLS]、[BOS]
+    generated_output = self.tokenizer.decode(beams[0][0][0].cpu().numpy().tolist())
     return token_ids, generated_output
