@@ -55,7 +55,6 @@ class PoemGPT(nn.Module):
       sampled_index = torch.multinomial(filtered_probs, 1)
       sampled_token = sorted_indices.gather(dim=-1, index=sampled_index)
 
-
       # Append sampled token
       token_ids = torch.cat([token_ids, sampled_token], dim=1)
       attention_mask = torch.cat(
@@ -92,7 +91,6 @@ class PoemGPT(nn.Module):
       sampled_index = torch.multinomial(filtered_probs, 1)
       sampled_token = sorted_indices.gather(dim=-1, index=sampled_index)
 
-
       # Append sampled token
       token_ids = torch.cat([token_ids, sampled_token], dim=1)
       attention_mask = torch.cat(
@@ -117,15 +115,15 @@ class PoemGPT(nn.Module):
       logits_sequence = self.forward(token_ids, attention_mask) #(bs,sl,vocab_size)
       last_logits = logits_sequence[:, -1, :]
       # greedy search 直接取出最大的一个值
-      sampled_token = torch.argmax(last_logits, dim=1).unsqueeze(dim=0)
+      sampled_token_id = torch.argmax(last_logits, dim=1).unsqueeze(dim=0)
 
       # Append sampled token
-      token_ids = torch.cat([token_ids, sampled_token], dim=1)
+      token_ids = torch.cat([token_ids, sampled_token_id], dim=1)
       attention_mask = torch.cat(
         [attention_mask, torch.ones((1, 1), dtype=torch.int64).to(self.get_device())], dim=1
       )
       # Stop if end-of-sequence token is reached
-      if sampled_token.item() == self.tokenizer.sep_token_id:
+      if sampled_token_id.item() == self.tokenizer.sep_token_id:
         break
 
     # 去除前3个token，一般前3个token为特殊的token，比如说[CLS]、[BOS]
@@ -153,7 +151,8 @@ class PoemGPT(nn.Module):
         last_scores = torch.nn.functional.softmax(last_logits, -1)
         for j in range(beam_size):
           # 更新每条路径的分数和token
-          t_res.append((torch.cat([token_id, indices[0, j].unsqueeze(0).unsqueeze(0)], dim=1), torch.log(last_scores[0][j]).item() +score))
+          t_res.append((torch.cat([token_id, indices[0, j].unsqueeze(0).unsqueeze(0)], dim=1),
+                         torch.log(last_scores[0][j]).item() +score))
       # Append sampled token
       beams = sorted(t_res, key=lambda x: -x[1])[:beam_size]
       attention_mask = torch.cat(
