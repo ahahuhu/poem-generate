@@ -109,11 +109,9 @@ def train(args):
             batch_losses.append(loss.item())
     
         train_loss = train_loss / num_batches
-        avg_batch_loss = np.mean(batch_losses)
         print(f"Epoch {epoch}: train loss :: {train_loss :.3f}")
         with open(os.path.join("result", f'{args.epochs}-{args.lr}.txt'), mode='a') as f:
             f.write(f"Epoch {epoch}: train loss : {train_loss :.3f}\n")
-            f.write(f"Epoch {epoch}: avg batch loss : {avg_batch_loss:.4f}\n")
   
     save_model(model, optimizer, args, f'{args.epochs}_{args.filepath}')
       

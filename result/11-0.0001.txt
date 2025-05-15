@@ -1,4 +1,11 @@
-训练时间：1747293109.0413625
+训练时间：1747293433.7528791
 训练轮数： 11
 学习率：0.0001
 
+Epoch 0: train loss : 9.631
+Epoch 1: train loss : 8.646
+Epoch 2: train loss : 7.618
+Epoch 3: train loss : 6.532
+Epoch 4: train loss : 5.710
+Epoch 5: train loss : 5.030
+Epoch 6: train loss : 4.519
