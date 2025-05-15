@@ -27,7 +27,10 @@ def generate_poem(args):
         # token_ids, generated_output = model.generate_top_q(encoding['input_ids'][:, :-1],temperature=args.temperature, top_p=args.top_p)
         # greedy search
         # token_ids, generated_output = model.generate_greedy_search(encoding['input_ids'][:, :-1])
-        token_ids, generated_output = model.generate_beam_search(encoding['input_ids'][:, :-1])
+        # beam search
+        # token_ids, generated_output = model.generate_beam_search(encoding['input_ids'][:, :-1])
+        # 首字引导生成
+        token_ids, generated_output = model.generate_hidden_poem(encoding['input_ids'][:,:-1], temperature=args.temperature, top_p=args.top_p)
 
         print(f'{generated_output}\n\n')
         ses = input("请输入要预测的诗句，输入0退出\n")
