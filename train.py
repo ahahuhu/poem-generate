@@ -129,7 +129,7 @@ def get_args():
   parser.add_argument("--temperature", type=float, help="softmax temperature.", default=1.2)
   parser.add_argument("--top_p", type=float, help="Cumulative probability distribution for nucleus sampling.", default=0.9)
 
-  parser.add_argument("--batch_size", help='The training batch size.', type=int, default=8)
+  parser.add_argument("--batch_size", help='The training batch size.', type=int, default=16)
   parser.add_argument("--lr", type=float, help="learning rate", default=1e-4)
   parser.add_argument("--model_name", type=str, help="The model size as specified on hugging face.", default='uer/gpt2-chinese-cluecorpussmall')
   parser.add_argument("--model_dir", type=str, default='cache/pretrained_model')
