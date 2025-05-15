@@ -5,6 +5,7 @@ from transformers import GPT2LMHeadModel, AutoModel
 from config import GPT2Config
 from model.base_gpt import GPTPreTrainedModel
 from modules.gpt2_layer import GPT2Layer
+from modules.lora_linear import LoRALinear
 import os
 
 def get_extended_attention_mask(attention_mask: torch.Tensor, dtype) -> torch.Tensor:
@@ -35,7 +36,7 @@ class GPT2Model(GPTPreTrainedModel):
         self.gpt_layers = nn.ModuleList([GPT2Layer(config) for _ in range(config.num_hidden_layers)])
     
         # [CLS] token transformations.
-        self.pooler_dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.pooler_dense = LoRALinear(config.hidden_size, config.hidden_size, use_lora=config.use_lora)
         self.pooler_af = nn.Tanh()
     
         # Final layer norm.
@@ -107,47 +108,78 @@ class GPT2Model(GPTPreTrainedModel):
 
 
     @classmethod
-    def from_pretrained(cls, model_name='uer/gpt2-chinese-cluecorpussmall', model_dir:str = 'cache/pretrained_model', d=768, l=12, num_heads=12):
+    def from_pretrained(cls, model_name='uer/gpt2-chinese-cluecorpussmall', model_dir:str = 'cache/pretrained_model', d=768, l=12, num_heads=12, use_lora: bool = False):
         if not os.path.exists(model_dir):
             os.makedirs(model_dir, exist_ok=True)
             AutoModel.from_pretrained(model_name).save_pretrained(model_dir)
         gpt_model = GPT2LMHeadModel.from_pretrained(model_dir).eval()
         our_model = GPT2Model(GPT2Config(hidden_size=d, num_hidden_layers=l,num_attention_heads=num_heads,
-                                         intermediate_size=d*3)).eval()
+                                         intermediate_size=d*3, use_lora = use_lora)).eval()
         # for name, param in gpt_model.named_parameters():
         #   print(name)
 
         # Load word and positional embeddings.
         our_model.word_embedding.load_state_dict(gpt_model.transformer.wte.state_dict())
         our_model.pos_embedding.load_state_dict(gpt_model.transformer.wpe.state_dict())
-
-        for i in range(l):
-            l = our_model.gpt_layers[i]
-            # Remap the Q,K,V weights from a conv1d to 3 linear projections
-            l.self_attention.query.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, :d].T
-            l.self_attention.query.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][:d]
-            l.self_attention.key.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, d:d*2].T
-            l.self_attention.key.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][d:d*2]
-            l.self_attention.value.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, d*2:].T
-            l.self_attention.value.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][d*2:]
-      
-            # Remap final dense layer in MHA.
-            l.attention_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_proj.weight'].T
-            l.attention_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_proj.bias']
-      
-            # Remap attention layer norm.
-            l.attention_layer_norm.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_1.weight']
-            l.attention_layer_norm.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_1.bias']
-      
-            # Remap post-attention MLP layers.
-            l.interm_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_fc.weight'].T
-            l.interm_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_fc.bias']
-            l.out_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_proj.weight'].T
-            l.out_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_proj.bias']
-      
-            # Remap second layer norm weights.
-            l.out_layer_norm.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_2.weight']
-            l.out_layer_norm.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_2.bias']
+        if use_lora:
+            for i in range(l):
+                l = our_model.gpt_layers[i]
+                # Remap the Q,K,V weights from a conv1d to 3 linear projections
+                l.self_attention.query.linear.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, :d].T
+                l.self_attention.query.linear.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][:d]
+                l.self_attention.key.linear.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, d:d*2].T
+                l.self_attention.key.linear.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][d:d*2]
+                l.self_attention.value.linear.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, d*2:].T
+                l.self_attention.value.linear.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][d*2:]
+        
+                # Remap final dense layer in MHA.
+                l.attention_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_proj.weight'].T
+                l.attention_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_proj.bias']
+        
+                # Remap attention layer norm.
+                l.attention_layer_norm.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_1.weight']
+                l.attention_layer_norm.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_1.bias']
+        
+                # Remap post-attention MLP layers.
+                # print("++++++++++++++++++++")
+                # print(l.interm_dense.linear.weight.shape)
+                # print(gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_fc.weight'].shape)
+                l.interm_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_fc.weight'].T
+                l.interm_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_fc.bias']
+                l.out_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_proj.weight'].T
+                l.out_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_proj.bias']
+        
+                # Remap second layer norm weights.
+                l.out_layer_norm.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_2.weight']
+                l.out_layer_norm.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_2.bias']
+        else:
+            for i in range(l):
+                l = our_model.gpt_layers[i]
+                # Remap the Q,K,V weights from a conv1d to 3 linear projections
+                l.self_attention.query.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, :d].T
+                l.self_attention.query.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][:d]
+                l.self_attention.key.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, d:d*2].T
+                l.self_attention.key.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][d:d*2]
+                l.self_attention.value.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.weight'][:, d*2:].T
+                l.self_attention.value.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_attn.bias'][d*2:]
+        
+                # Remap final dense layer in MHA.
+                l.attention_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_proj.weight'].T
+                l.attention_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.attn.c_proj.bias']
+        
+                # Remap attention layer norm.
+                l.attention_layer_norm.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_1.weight']
+                l.attention_layer_norm.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_1.bias']
+        
+                # Remap post-attention MLP layers.
+                l.interm_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_fc.weight'].T
+                l.interm_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_fc.bias']
+                l.out_dense.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_proj.weight'].T
+                l.out_dense.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.mlp.c_proj.bias']
+        
+                # Remap second layer norm weights.
+                l.out_layer_norm.weight.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_2.weight']
+                l.out_layer_norm.bias.data = gpt_model.state_dict()[f'transformer.h.{i}.ln_2.bias']
 
         # Remap the final layer norm values.
         our_model.final_layer_norm.weight.data = gpt_model.state_dict()['transformer.ln_f.weight']

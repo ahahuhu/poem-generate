@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from modules.attention import CausalSelfAttention
+from modules.lora_linear import LoRALinear
 
 class GPT2Layer(nn.Module):
   def __init__(self, config):

@@ -8,7 +8,7 @@ class PoemGPT(nn.Module):
 
   def __init__(self, args, tokenizer):
     super().__init__()
-    self.gpt = GPT2Model.from_pretrained(model_name=args.model_name, model_dir=args.model_dir, d=args.d, l=args.l, num_heads=args.num_heads)
+    self.gpt = GPT2Model.from_pretrained(model_name=args.model_name, model_dir=args.model_dir, d=args.d, l=args.l, num_heads=args.num_heads, use_lora=args.use_lora)
     self.tokenizer = tokenizer
 
     # 将最终的输出last_hidden_state转化为词汇表的概率分布
@@ -16,8 +16,19 @@ class PoemGPT(nn.Module):
     self.config = args
     self.device = "cuda" if args.use_gpu else "cpu"
 
-    for name, param in self.gpt.named_parameters():
+    if args.use_lora:
+      # 最后四分之一层，加上前面lora的A和B进行参数更新
+      for name, param in self.gpt.named_parameters():
+        if "11" in name or "pooler_dense" in name or "final_layer_norm" in name or "lora" in name:
+          param.requires_grad = True
+        else:
+          param.requires_grad = False
+    else:
+      for name, param in self.gpt.named_parameters():
         param.requires_grad = True
+    
+    self.print_trainable_parameters()
+
 
   def forward(self, input_ids, attention_mask):
     sequence_output, last_token = self.gpt(input_ids, attention_mask).values()
@@ -178,7 +189,6 @@ class PoemGPT(nn.Module):
         cur_ids = torch.cat([prev_tokens_tensor, token_ids[:, idx:idx+1]], dim=1)
       else:
         cur_ids = token_ids[:, idx:idx+1]  # 第一句只用首字
-
       cur_sentence = cur_ids.clone()
       for _ in range(max_length):
         token_ids_out, _ = self.generate_top_q(cur_sentence, temperature, top_p, max_length=1)
@@ -203,3 +213,18 @@ class PoemGPT(nn.Module):
     all_token_ids = torch.tensor(all_token_ids, dtype=torch.long, device=device).unsqueeze(0)
     generated_output = self.tokenizer.decode(all_token_ids[0].cpu().numpy().tolist())
     return all_token_ids, generated_output
+
+  def print_trainable_parameters(self):
+    total_params = 0
+    trainable_params = 0
+    total_tensors = 0
+    trainable_tensors = 0
+    for name, param in self.named_parameters():
+      numel = param.numel()
+      total_params += numel
+      total_tensors += 1
+      if param.requires_grad:
+        trainable_params += numel
+        trainable_tensors += 1
+    print(f"\nTrainable tensors: {trainable_tensors}/{total_tensors} ({100*trainable_tensors/total_tensors:.2f}%)")
+    print(f"Trainable parameters: {trainable_params}/{total_params} ({100*trainable_params/total_params:.2f}%)")

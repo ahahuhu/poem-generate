@@ -1,4 +1,5 @@
 import argparse
+from inspect import getargs
 import random
 import time
 from tkinter import W
@@ -133,7 +134,7 @@ def get_args():
   parser.add_argument("--model_name", type=str, help="The model size as specified on hugging face.", default='uer/gpt2-chinese-cluecorpussmall')
   parser.add_argument("--model_dir", type=str, default='cache/pretrained_model')
   parser.add_argument("--tokenizer_dir", type=str, default='cache/bert-tokenizer')
-
+  parser.add_argument("--use_lora", action="store_true")
   args = parser.parse_args()
   return args
 
