@@ -13,9 +13,9 @@ class CausalSelfAttention(nn.Module):
     self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
     self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-    self.query = LoRALinear(config.hidden_size, self.all_head_size, use_lora=config.use_lora)
-    self.key = LoRALinear(config.hidden_size, self.all_head_size, use_lora=config.use_lora)
-    self.value = LoRALinear(config.hidden_size, self.all_head_size, use_lora=config.use_lora)
+    self.query = nn.Linear(config.hidden_size, self.all_head_size)
+    self.key = nn.Linear(config.hidden_size, self.all_head_size)
+    self.value = nn.Linear(config.hidden_size, self.all_head_size)
 
     # This dropout is applied to normalized attention scores following the original
     # implementation of transformer. Although it is a bit unusual, we empirically

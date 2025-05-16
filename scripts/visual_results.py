@@ -4,6 +4,7 @@ import os
 from typing import List
 
 FILE_PATH = [
+    'result/30-0.0001-peft.txt',
     'result/20-0.01.txt',
     'result/20-0.001.txt',
     'result/20-0.0001.txt',

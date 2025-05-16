@@ -8,7 +8,7 @@ class PoemGPT(nn.Module):
 
   def __init__(self, args, tokenizer):
     super().__init__()
-    self.gpt = GPT2Model.from_pretrained(model_name=args.model_name, model_dir=args.model_dir, d=args.d, l=args.l, num_heads=args.num_heads, use_lora=args.use_lora)
+    self.gpt = GPT2Model.from_pretrained(model_name=args.model_name, model_dir=args.model_dir, d=args.d, l=args.l, num_heads=args.num_heads, use_lora=getattr(args, "use_lora", False))
     self.tokenizer = tokenizer
 
     # 将最终的输出last_hidden_state转化为词汇表的概率分布
@@ -16,7 +16,7 @@ class PoemGPT(nn.Module):
     self.config = args
     self.device = "cuda" if args.use_gpu else "cpu"
 
-    if args.use_lora:
+    if getattr(args, "use_lora", False):
       # 最后四分之一层，加上前面lora的A和B进行参数更新
       for name, param in self.gpt.named_parameters():
         if "11" in name or "pooler_dense" in name or "final_layer_norm" in name or "lora" in name:
@@ -195,7 +195,7 @@ class PoemGPT(nn.Module):
         next_token = token_ids_out[0, -1].unsqueeze(0).unsqueeze(0)
         cur_sentence = torch.cat([cur_sentence, next_token], dim=1)
         # 判断是否为句末
-        if next_token.item() == self.tokenizer.sep_token_id or self.tokenizer.decode([next_token.item()]) == '。':
+        if next_token.item() == self.tokenizer.sep_token_id or self.tokenizer.decode([next_token.item()]) == '。' or self.tokenizer.decode([next_token.item()]) == '，':
           break
       # 只保留本次新生成的内容（去掉输入部分，只保留首字及后续生成）
       if generated_token_ids:
@@ -228,3 +228,6 @@ class PoemGPT(nn.Module):
         trainable_tensors += 1
     print(f"\nTrainable tensors: {trainable_tensors}/{total_tensors} ({100*trainable_tensors/total_tensors:.2f}%)")
     print(f"Trainable parameters: {trainable_params}/{total_params} ({100*trainable_params/total_params:.2f}%)")
+
+if __name__ == "__main__":
+    pass
